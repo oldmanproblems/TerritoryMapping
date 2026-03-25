@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Territory Builder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede8;
+    --text: #1a1a1a; --text2: #6b6b6b; --text3: #9a9a9a;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --success-bg: #eaf3de; --success-text: #27500a;
+    --danger-bg: #fcebeb; --danger-text: #a32d2d;
+    --warn-bg: #faeeda; --warn-text: #854f0b;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: var(--text); background: var(--bg3); min-height: 100vh; }
+
+  header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header span { font-size: 12px; color: var(--text2); }
+
+  .app { display: grid; grid-template-columns: 400px 1fr; min-height: calc(100vh - 49px); }
+  .left { background: var(--bg); border-right: 0.5px solid var(--border); padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .right { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+
+  h2 { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+  label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 3px; }
+
+  input, select, textarea {
+    width: 100%; padding: 7px 10px;
+    border: 0.5px solid var(--border2); border-radius: var(--radius);
+    font-size: 13px; background: var(--bg); color: var(--text);
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 3px rgba(55,138,221,0.12); }
+
+  button {
+    padding: 7px 13px; border: 0.5px solid var(--border2); border-radius: var(--radius);
+    font-size: 13px; font-family: inherit; background: var(--bg); color: var(--text);
+    cursor: pointer; transition: background .15s;
+  }
+  button:hover { background: var(--bg2); }
+  button.pri { background: #1a1a1a; color: #fff; border-color: transparent; }
+  button.pri:hover { background: #333; }
+  button.del { color: var(--danger-text); border-color: #f7c1c1; }
+  button.del:hover { background: var(--danger-bg); }
+  button.sm { padding: 5px 10px; font-size: 12px; }
+
+  .sep { height: 0.5px; background: var(--border); }
+
+  .rrow { display: flex; gap: 6px; margin-bottom: 4px; align-items: center; }
+  .rrow select { flex: 0 0 178px; }
+  .rrow input { flex: 1; min-width: 0; }
+  .rrow button { flex-shrink: 0; padding: 6px 9px; }
+  .hint { font-size: 11px; color: var(--text3); margin: -2px 0 6px 2px; line-height: 1.5; }
+
+  .msg { font-size: 12px; padding: 8px 11px; border-radius: var(--radius); line-height: 1.5; }
+  .msg.ok   { background: var(--success-bg); color: var(--success-text); }
+  .msg.err  { background: var(--danger-bg);  color: var(--danger-text); }
+  .msg.warn { background: var(--warn-bg);    color: var(--warn-text); }
+
+  .tcard { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 11px; cursor: pointer; margin-bottom: 6px; background: var(--bg); transition: border-color .15s; }
+  .tcard:hover { border-color: var(--border2); }
+  .tcard.sel { border-color: #378ADD; background: #f0f7ff; }
+  .th { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .tn { font-weight: 600; flex: 1; font-size: 13px; }
+  .tc { font-size: 12px; color: var(--text2); }
+  .ts { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .srow { display: flex; gap: 8px; }
+  .sc { flex: 1; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 10px; }
+  .sv { font-size: 22px; font-weight: 600; }
+  .sl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .zbox { background: var(--bg2); border-radius: var(--radius); padding: 8px; font-size: 11px; font-family: 'Courier New', monospace; max-height: 90px; overflow-y: auto; line-height: 1.6; word-break: break-all; color: var(--text2); }
+
+  .tbar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+  .detail-card { border: 0.5px solid #378ADD; border-radius: var(--radius-lg); padding: 12px; background: #f0f7ff; }
+
+  textarea.csv { height: 200px; font-family: 'Courier New', monospace; font-size: 11px; background: var(--bg2); resize: vertical; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--bg); border-radius: var(--radius-lg); overflow: hidden; border: 0.5px solid var(--border); }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  th { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; background: var(--bg2); }
+  tr:last-child td { border-bottom: none; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: var(--bg2); }
+  tr.clickable.sel td { background: #f0f7ff; }
+  td.right { text-align: right; }
+  td.muted { color: var(--text2); font-size: 11px; }
+
+  .color-swatch { width: 17px; height: 17px; border-radius: 50%; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; transition: outline-color .1s; display: inline-block; }
+  .color-swatch.active { outline-color: #378ADD; }
+
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    .left { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Territory Builder</h1>
+  <span id="saveStatus">All changes saved locally</span>
+</header>
+
+<div class="app">
+<!-- LEFT PANEL -->
+<div class="left">
+  <div>
+    <h2>New Territory</h2>
+  </div>
+
+  <div>
+    <label>Territory name</label>
+    <input type="text" id="tName" placeholder="e.g. South Pacific" />
+  </div>
+
+  <div>
+    <label>Color</label>
+    <div id="colorPicker" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px"></div>
+  </div>
+
+  <div>
+    <label>Rules</label>
+    <div id="rulesContainer"></div>
+    <button onclick="addRule()" style="width:100%;margin-top:2px">+ Add rule</button>
+  </div>
+
+  <div id="buildMsg" style="display:none"></div>
+
+  <div style="display:flex;gap:6px">
+    <button class="pri" style="flex:1" onclick="buildTerritory()">Build territory</button>
+    <button onclick="clearForm()">Clear</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h2>Territories (<span id="tCount">0</span>)</h2>
+    <button class="sm" onclick="exportAll()">Export all CSV</button>
+  </div>
+  <div id="territoryList"><p style="font-size:13px;color:var(--text2)">No territories yet.</p></div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+  <div class="srow">
+    <div class="sc"><div class="sv" id="sTerr">0</div><div class="sl">Territories</div></div>
+    <div class="sc"><div class="sv" id="sZips">0</div><div class="sl">Total ZIPs</div></div>
+    <div class="sc"><div class="sv" id="sStates">0</div><div class="sl">States</div></div>
+    <div class="sc"><div class="sv" id="sOver">0</div><div class="sl">Overlaps</div></div>
+  </div>
+
+  <div id="detailWrap" style="display:none">
+    <div class="detail-card">
+      <div class="th">
+        <div class="dot" id="dDot"></div>
+        <div class="tn" id="dName"></div>
+        <div class="tc" id="dCount"></div>
+      </div>
+      <div class="ts" id="dRules" style="margin-top:4px"></div>
+      <div style="font-size:11px;font-weight:600;margin:10px 0 4px;color:var(--text2)">ZIP PREVIEW</div>
+      <div class="zbox" id="dZips"></div>
+      <div class="tbar">
+        <button onclick="doExport()">Export CSV</button>
+        <button onclick="doCopyZips()">Copy ZIPs</button>
+        <button class="del" onclick="deleteSelected()">Delete territory</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportWrap" style="display:none">
+    <label style="font-weight:600;font-size:12px">CSV output — click inside, Ctrl+A, then copy or save as .csv</label>
+    <textarea class="csv" id="exportBox" readonly onclick="this.select()" style="margin-top:4px"></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button onclick="selAll()">Select all</button>
+      <button onclick="doCopy()">Copy to clipboard</button>
+      <button onclick="saveFile()">Save as .csv file</button>
+      <button onclick="document.getElementById('exportWrap').style.display='none'">Hide</button>
+    </div>
+    <div id="copyMsg" style="display:none;margin-top:6px" class="msg ok">Copied to clipboard!</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h2>All territories</h2>
+    <button class="sm" onclick="checkOverlaps()">Check overlaps</button>
+  </div>
+  <div id="overlapMsg" style="display:none"></div>
+  <div id="summaryTable"></div>
+</div>
+</div>
+
+<script>
+// ── ZIP ranges by state ──
+const SR = {
+  AK:[[99501,99950]],AL:[[35004,36925]],AR:[[71601,72959],[75502,75502]],
+  AZ:[[85001,86556]],CA:[[90001,96162]],CO:[[80001,81658]],CT:[[6001,6928]],
+  DC:[[20001,20098]],DE:[[19701,19980]],FL:[[32004,34997]],
+  GA:[[30001,31999],[39901,39901]],HI:[[96701,96898]],IA:[[50001,52809]],
+  ID:[[83201,83876]],IL:[[60001,62999]],IN:[[46001,47997]],KS:[[66002,67954]],
+  KY:[[40003,42788]],LA:[[70001,71497]],MA:[[1001,2791],[5501,5544]],
+  MD:[[20601,21930]],ME:[[3901,4992]],MI:[[48001,49971]],MN:[[55001,56763]],
+  MO:[[63001,65899]],MS:[[38601,39776],[71233,71233]],MT:[[59001,59937]],
+  NC:[[27006,28909]],ND:[[58001,58856]],NE:[[68001,69367]],NH:[[3031,3897]],
+  NJ:[[7001,8989]],NM:[[87001,88441]],NV:[[88901,89883]],NY:[[10001,14975]],
+  OH:[[43001,45999]],OK:[[73001,74966]],OR:[[97001,97920]],PA:[[15001,19640]],
+  RI:[[2801,2940]],SC:[[29001,29948]],SD:[[57001,57799]],TN:[[37010,38589]],
+  TX:[[73301,73301],[75001,79999],[88510,88589]],UT:[[84001,84784]],
+  VA:[[20101,24658]],VT:[[5001,5495],[5601,5907]],WA:[[98001,99403]],
+  WI:[[53001,54990]],WV:[[24701,26886]],WY:[[82001,83128]]
+};
+
+const TOK2ST = {
+  AL:'AL',ALABAMA:'AL',AK:'AK',ALASKA:'AK',AZ:'AZ',ARIZONA:'AZ',
+  AR:'AR',ARKANSAS:'AR',CA:'CA',CALIFORNIA:'CA',CO:'CO',COLORADO:'CO',
+  CT:'CT',CONNECTICUT:'CT',DC:'DC','DISTRICT OF COLUMBIA':'DC',
+  DE:'DE',DELAWARE:'DE',FL:'FL',FLORIDA:'FL',GA:'GA',GEORGIA:'GA',
+  HI:'HI',HAWAII:'HI',ID:'ID',IDAHO:'ID',IL:'IL',ILLINOIS:'IL',
+  IN:'IN',INDIANA:'IN',IA:'IA',IOWA:'IA',KS:'KS',KANSAS:'KS',
+  KY:'KY',KENTUCKY:'KY',LA:'LA',LOUISIANA:'LA',ME:'ME',MAINE:'ME',
+  MD:'MD',MARYLAND:'MD',MA:'MA',MASSACHUSETTS:'MA',MI:'MI',MICHIGAN:'MI',
+  MN:'MN',MINNESOTA:'MN',MS:'MS',MISSISSIPPI:'MS',MO:'MO',MISSOURI:'MO',
+  MT:'MT',MONTANA:'MT',NE:'NE',NEBRASKA:'NE',NV:'NV',NEVADA:'NV',
+  NH:'NH','NEW HAMPSHIRE':'NH',NJ:'NJ','NEW JERSEY':'NJ',
+  NM:'NM','NEW MEXICO':'NM',NY:'NY','NEW YORK':'NY',
+  NC:'NC','NORTH CAROLINA':'NC',ND:'ND','NORTH DAKOTA':'ND',
+  OH:'OH',OHIO:'OH',OK:'OK',OKLAHOMA:'OK',OR:'OR',OREGON:'OR',
+  PA:'PA',PENNSYLVANIA:'PA',RI:'RI','RHODE ISLAND':'RI',
+  SC:'SC','SOUTH CAROLINA':'SC',SD:'SD','SOUTH DAKOTA':'SD',
+  TN:'TN',TENNESSEE:'TN',TX:'TX',TEXAS:'TX',UT:'UT',UTAH:'UT',
+  VT:'VT',VERMONT:'VT',VA:'VA',VIRGINIA:'VA',WA:'WA',WASHINGTON:'WA',
+  WV:'WV','WEST VIRGINIA':'WV',WI:'WI',WISCONSIN:'WI',WY:'WY',WYOMING:'WY'
+};
+
+const DIR_TOKENS = {
+  SOUTH:'south',SOUTHERN:'south',NORTE:'north',
+  NORTH:'north',NORTHERN:'north',
+  EAST:'east',EASTERN:'east',
+  WEST:'west',WESTERN:'west',
+  CENTRAL:'central',CENTER:'central'
+};
+
+const PARTIAL = {
+  CA:{ south:[[900,935]], north:[[939,961]], central:[[932,938]] },
+  TX:{ south:[[780,782],[786,789]], north:[[750,754],[760,768]], west:[[795,799],[885,885]], east:[[756,759],[770,779]] },
+  FL:{ south:[[330,334]], north:[[320,326]], central:[[327,329]] },
+  NY:{ south:[[100,104],[110,119]], north:[[120,149]] },
+  IL:{ north:[[600,611]], south:[[618,629]], central:[[612,617]] },
+  OH:{ north:[[430,440]], south:[[456,458]], central:[[430,435]] },
+  PA:{ east:[[180,196]], west:[[150,165]], central:[[166,179]] },
+  WA:{ west:[[980,985]], east:[[986,994]] },
+  OR:{ west:[[970,975]], east:[[976,979]] },
+};
+
+const CACHE = {};
+function stateZips(ab) {
+  if (CACHE[ab]) return CACHE[ab];
+  const out = [];
+  (SR[ab]||[]).forEach(([lo,hi]) => { for(let n=lo;n<=hi;n++) out.push(String(n).padStart(5,'0')); });
+  CACHE[ab] = out; return out;
+}
+function prefixZips(p) {
+  const s = String(p).padStart(3,'0'); const out = [];
+  for(let i=0;i<100;i++) out.push(s+String(i).padStart(2,'0'));
+  return out;
+}
+function prefixRangesToZips(ranges) {
+  const zips = new Set();
+  ranges.forEach(([lo,hi]) => { for(let p=lo;p<=hi;p++) prefixZips(p).forEach(z=>zips.add(z)); });
+  return zips;
+}
+
+function parsePartialInput(raw) {
+  const clean = raw.toUpperCase().replace(/[^A-Z\s]/g,' ').replace(/\s+/g,' ').trim();
+  const words = clean.split(' ');
+  let stateAb = null, dir = null;
+  for(let i=0;i<words.length-1;i++){
+    const two = words[i]+' '+words[i+1];
+    if(TOK2ST[two]){ stateAb=TOK2ST[two]; break; }
+  }
+  for(const w of words){
+    if(!stateAb && TOK2ST[w]) stateAb=TOK2ST[w];
+    if(!dir && DIR_TOKENS[w]) dir=DIR_TOKENS[w];
+  }
+  return { stateAb, dir };
+}
+
+function resolveRule(type, rawVal) {
+  const zips = new Set();
+  if (type==='state') {
+    const u = rawVal.trim().toUpperCase().replace(/\s+/g,' ');
+    const ab = TOK2ST[u];
+    if (!ab) return { error:'Unknown state: "'+rawVal+'". Use abbreviation (AZ) or full name (Arizona).' };
+    stateZips(ab).forEach(z=>zips.add(z));
+  } else if (type==='partial') {
+    const {stateAb, dir} = parsePartialInput(rawVal);
+    if (!stateAb) return { error:'Could not find a state in "'+rawVal+'". Try "Southern CA", "South California", or "CA South".' };
+    const defs = PARTIAL[stateAb];
+    if (!dir || !defs || !defs[dir]) {
+      stateZips(stateAb).forEach(z=>zips.add(z));
+      const note = dir ? 'No partial data for '+dir+' '+stateAb : 'No direction detected';
+      return { zips:[...zips].sort(), warn:note+' — used full state. Refine with ZIP prefix or range rules if needed.' };
+    }
+    prefixRangesToZips(defs[dir]).forEach(z=>zips.add(z));
+  } else if (type==='zip_prefix') {
+    const p = parseInt(rawVal.replace(/\D/g,''));
+    if(isNaN(p)) return { error:'Enter a 3-digit ZIP prefix, e.g. 902' };
+    prefixZips(p).forEach(z=>zips.add(z));
+  } else if (type==='zip_range') {
+    const parts = rawVal.split('-').map(s=>parseInt(s.trim()));
+    if(parts.length!==2||isNaN(parts[0])||isNaN(parts[1]))
+      return { error:'ZIP range must be NNNNN-NNNNN, e.g. 90001-92899' };
+    for(let n=parts[0];n<=parts[1];n++) zips.add(String(n).padStart(5,'0'));
+  } else if (type==='zip_list') {
+    rawVal.split(/[\s,]+/).forEach(z=>{ const c=z.replace(/\D/g,''); if(c.length===5) zips.add(c); });
+    if(!zips.size) return { error:'No valid 5-digit ZIPs found in list.' };
+  }
+  return { zips:[...zips].sort() };
+}
+
+// ── Rule UI ──
+const RULE_TYPES = [
+  {v:'state',      l:'Full state',             ph:'e.g. AZ  or  Arizona'},
+  {v:'partial',    l:'Partial state/region',   ph:'e.g. Southern CA  or  North Texas  or  CA South'},
+  {v:'zip_prefix', l:'ZIP prefix (3-digit)',    ph:'e.g. 902'},
+  {v:'zip_range',  l:'ZIP range',              ph:'e.g. 90001-92899'},
+  {v:'zip_list',   l:'ZIP list',               ph:'e.g. 90210, 90211'},
+];
+const HINTS = {
+  state:'Accepts 2-letter abbreviation or full state name.',
+  partial:'Any combo works: "Southern CA", "South California", "CA South", "Northern Texas", "TX North".',
+  zip_prefix:'3-digit prefix covers all 100 ZIPs in that group.',
+  zip_range:'Format: NNNNN-NNNNN',
+  zip_list:'Comma or space separated 5-digit ZIP codes.',
+};
+let ruleId=0;
+function addRule(){
+  const id=ruleId++;
+  const row=document.createElement('div'); row.className='rrow'; row.id='rr'+id;
+  const opts=RULE_TYPES.map(r=>`<option value="${r.v}">${r.l}</option>`).join('');
+  row.innerHTML=`<select id="rt${id}" onchange="updateHint(${id})">${opts}</select><input type="text" id="rv${id}" placeholder="${RULE_TYPES[0].ph}" /><button onclick="removeRule('rr${id}','hint${id}')">✕</button>`;
+  const hint=document.createElement('div'); hint.className='hint'; hint.id='hint'+id;
+  hint.textContent=HINTS[RULE_TYPES[0].v];
+  const c=document.getElementById('rulesContainer');
+  c.appendChild(row); c.appendChild(hint);
+}
+function removeRule(rId,hId){
+  const r=document.getElementById(rId); if(r) r.remove();
+  const h=document.getElementById(hId); if(h) h.remove();
+}
+function updateHint(id){
+  const type=document.getElementById('rt'+id).value;
+  document.getElementById('rv'+id).placeholder=RULE_TYPES.find(r=>r.v===type).ph;
+  document.getElementById('hint'+id).textContent=HINTS[type];
+}
+
+function showMsg(txt,type){
+  const el=document.getElementById('buildMsg');
+  el.className='msg '+type; el.textContent=txt; el.style.display='block';
+  if(type!=='err') setTimeout(()=>el.style.display='none',5000);
+}
+
+// ── Color picker ──
+const COLORS=['#378ADD','#1D9E75','#D85A30','#A32D2D','#534AB7','#BA7517','#D4537E','#3B6D11','#0F6E56','#993C1D','#854F0B','#5F5E5A'];
+let selColor=COLORS[0], territories=[], selIdx=null;
+const cp=document.getElementById('colorPicker');
+COLORS.forEach((c,i)=>{
+  const d=document.createElement('span');
+  d.className='color-swatch'+(i===0?' active':'');
+  d.style.background=c; d.title=c;
+  d.onclick=()=>{ selColor=c; cp.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('active')); d.classList.add('active'); };
+  cp.appendChild(d);
+});
+
+// ── Build ──
+function buildTerritory(){
+  const name=document.getElementById('tName').value.trim();
+  if(!name){ showMsg('Enter a territory name.','err'); return; }
+  const rows=document.querySelectorAll('.rrow');
+  if(!rows.length){ showMsg('Add at least one rule.','err'); return; }
+  const zipSet=new Set(), rules=[]; let warnMsg=null;
+  for(const row of rows){
+    const suf=row.id.replace('rr','');
+    const type=document.getElementById('rt'+suf).value;
+    const val=document.getElementById('rv'+suf).value.trim();
+    if(!val) continue;
+    const result=resolveRule(type,val);
+    if(result.error){ showMsg(result.error,'err'); return; }
+    if(result.warn) warnMsg=result.warn;
+    result.zips.forEach(z=>zipSet.add(z));
+    rules.push({type,val});
+  }
+  if(!zipSet.size){ showMsg('No ZIPs matched — check rule values.','err'); return; }
+  territories.push({name,color:selColor,rules,zips:[...zipSet].sort()});
+  if(warnMsg) showMsg('Built "'+name+'" ('+zipSet.size.toLocaleString()+' ZIPs). Note: '+warnMsg,'warn');
+  else showMsg('Built "'+name+'" — '+zipSet.size.toLocaleString()+' ZIP codes.','ok');
+  save(); renderAll(); selectTerritory(territories.length-1); clearForm();
+}
+
+function clearForm(){
+  document.getElementById('tName').value='';
+  document.getElementById('rulesContainer').innerHTML='';
+  document.getElementById('buildMsg').style.display='none';
+  ruleId=0;
+}
+
+// ── Persistence ──
+function save(){
+  try {
+    localStorage.setItem('territory_builder_data', JSON.stringify(territories));
+    document.getElementById('saveStatus').textContent='Saved — '+new Date().toLocaleTimeString();
+  } catch(e) { document.getElementById('saveStatus').textContent='Save failed'; }
+}
+function load(){
+  try {
+    const raw=localStorage.getItem('territory_builder_data');
+    if(raw) territories=JSON.parse(raw);
+  } catch(e) { territories=[]; }
+}
+
+// ── Render ──
+function getStateForZip(zip){
+  const n=parseInt(zip);
+  for(const [st,ranges] of Object.entries(SR)) for(const [lo,hi] of ranges) if(n>=lo&&n<=hi) return st;
+  return '?';
+}
+function renderAll(){ renderList(); updateStats(); renderSummary(); }
+
+function renderList(){
+  document.getElementById('tCount').textContent=territories.length;
+  const el=document.getElementById('territoryList');
+  if(!territories.length){ el.innerHTML='<p style="font-size:13px;color:var(--text2)">No territories yet.</p>'; return; }
+  el.innerHTML='';
+  territories.forEach((t,i)=>{
+    const states=[...new Set(t.zips.map(getStateForZip))].sort().join(', ');
+    const d=document.createElement('div'); d.className='tcard'+(i===selIdx?' sel':'');
+    d.innerHTML=`<div class="th"><div class="dot" style="background:${t.color}"></div><div class="tn">${t.name}</div><div class="tc">${t.zips.length.toLocaleString()} ZIPs</div></div><div class="ts">${states}</div>`;
+    d.onclick=()=>selectTerritory(i); el.appendChild(d);
+  });
+}
+
+function selectTerritory(i){
+  selIdx=i; renderList();
+  const t=territories[i];
+  document.getElementById('detailWrap').style.display='block';
+  document.getElementById('dDot').style.background=t.color;
+  document.getElementById('dName').textContent=t.name;
+  document.getElementById('dCount').textContent=t.zips.length.toLocaleString()+' ZIP codes';
+  document.getElementById('dRules').textContent=t.rules.map(r=>r.type+': '+r.val).join(' | ');
+  const preview=t.zips.slice(0,150).join(', ')+(t.zips.length>150?` … +${t.zips.length-150} more`:'');
+  document.getElementById('dZips').textContent=preview;
+  document.getElementById('exportWrap').style.display='none';
+  renderSummary();
+}
+
+function updateStats(){
+  const all=territories.flatMap(t=>t.zips);
+  const uniq=new Set(all),states=new Set(all.map(getStateForZip));
+  const cnt={}; all.forEach(z=>cnt[z]=(cnt[z]||0)+1);
+  document.getElementById('sTerr').textContent=territories.length;
+  document.getElementById('sZips').textContent=uniq.size.toLocaleString();
+  document.getElementById('sStates').textContent=states.size;
+  document.getElementById('sOver').textContent=Object.values(cnt).filter(c=>c>1).length;
+}
+
+function renderSummary(){
+  const el=document.getElementById('summaryTable');
+  if(!territories.length){ el.innerHTML=''; return; }
+  let h='<table><thead><tr><th>Territory</th><th>ZIPs</th><th>States</th><th></th></tr></thead><tbody>';
+  territories.forEach((t,i)=>{
+    const states=[...new Set(t.zips.map(getStateForZip))].sort().join(', ');
+    h+=`<tr class="clickable${i===selIdx?' sel':''}" onclick="selectTerritory(${i})">
+      <td><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${t.color};display:inline-block;flex-shrink:0"></span>${t.name}</span></td>
+      <td class="right">${t.zips.length.toLocaleString()}</td>
+      <td class="muted">${states}</td>
+      <td><button class="sm del" onclick="event.stopPropagation();deleteIdx(${i})">Delete</button></td>
+    </tr>`;
+  });
+  el.innerHTML=h+'</tbody></table>';
+}
+
+function deleteSelected(){
+  if(selIdx===null) return; deleteIdx(selIdx);
+}
+function deleteIdx(i){
+  if(!confirm('Delete "'+territories[i].name+'"?')) return;
+  territories.splice(i,1);
+  if(selIdx===i){ selIdx=null; document.getElementById('detailWrap').style.display='none'; document.getElementById('exportWrap').style.display='none'; }
+  else if(selIdx>i) selIdx--;
+  save(); renderAll();
+}
+
+// ── Export ──
+function makeCsv(terrs){
+  const rows=['ZIP Code,Territory'];
+  terrs.forEach(t=>t.zips.forEach(z=>rows.push(z+','+t.name)));
+  return rows.join('\n');
+}
+function doExport(){ if(selIdx===null) return; showCsv(makeCsv([territories[selIdx]])); }
+function exportAll(){ if(!territories.length){ alert('No territories to export.'); return; } showCsv(makeCsv(territories)); }
+function showCsv(csv){
+  document.getElementById('exportBox').value=csv;
+  document.getElementById('exportWrap').style.display='block';
+  setTimeout(()=>{ const b=document.getElementById('exportBox'); b.focus(); b.select(); },50);
+}
+function selAll(){ const b=document.getElementById('exportBox'); b.focus(); b.select(); }
+function doCopy(){
+  const b=document.getElementById('exportBox'); b.select();
+  try{
+    document.execCommand('copy');
+    const m=document.getElementById('copyMsg'); m.style.display='block';
+    setTimeout(()=>m.style.display='none',2000);
+  } catch(e){ b.focus(); b.select(); }
+}
+function doCopyZips(){
+  if(selIdx===null) return;
+  const ta=document.createElement('textarea');
+  ta.value=territories[selIdx].zips.join('\n');
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  alert('ZIPs copied to clipboard!');
+}
+function saveFile(){
+  const csv=document.getElementById('exportBox').value;
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='territories.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function checkOverlaps(){
+  const el=document.getElementById('overlapMsg');
+  const zipMap={};
+  territories.forEach(t=>t.zips.forEach(z=>{ if(!zipMap[z]) zipMap[z]=[]; zipMap[z].push(t.name); }));
+  const ov=Object.entries(zipMap).filter(([,ts])=>ts.length>1);
+  el.style.display='block';
+  if(!ov.length){ el.className='msg ok'; el.textContent='No overlapping ZIPs found across all territories.'; }
+  else{ el.className='msg err'; el.innerHTML=`${ov.length} overlapping ZIPs found. Sample: `+ov.slice(0,5).map(([z,ts])=>`<strong>${z}</strong> → ${ts.join(' & ')}`).join('; '); }
+}
+
+// ── Init ──
+load();
+renderAll();
+if(territories.length) selectTerritory(0);
+addRule();
+</script>
+</body>
+</html>
